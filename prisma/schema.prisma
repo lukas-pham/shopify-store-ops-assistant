@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// Every business table has shop_id; every query filters by the session's shop.
+
+model ShopSettings {
+  shopId            String   @id @map("shop_id")
+  lowStockThreshold Int      @default(5) @map("low_stock_threshold")
+  slowMoverDays     Int      @default(30) @map("slow_mover_days")
+  slowMoverMaxUnits Int      @default(1) @map("slow_mover_max_units")
+  updatedAt         DateTime @updatedAt
+
+  @@map("shop_settings")
+}
+
+model AgentRun {
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  askedBy   String   @map("asked_by")
+  question  String
+  status    String   @default("running") // running | answered | unverified | failed
+  steps     Json     @default("[]") // [{ n, tool, input, summary, data }] — PII-redacted
+  answer    Json? // { text, figures, chart, warnings }
+  error     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([shopId, createdAt])
+  @@map("agent_runs")
+}
+
+model Proposal {
+  id        String    @id @default(cuid())
+  shopId    String    @map("shop_id")
+  runId     String?   @map("run_id")
+  kind      String // inventory_adjust | add_tags
+  title     String
+  reason    String
+  payload   Json // exact mutation input
+  preview   Json // [{ label, before, after }]
+  status    String    @default("pending") // pending | approved | rejected | applied | failed
+  error     String?
+  decidedBy String?   @map("decided_by")
+  decidedAt DateTime? @map("decided_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([shopId, status])
+  @@map("proposals")
+}
+
+/// Append-only: the app never updates or deletes rows (except shop/redact).
+model AuditLog {
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  actor     String
+  action    String
+  target    String
+  details   Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([shopId, createdAt])
+  @@map("audit_log")
+}
+
+model AiCall {
+  id            String   @id @default(cuid())
+  shopId        String   @map("shop_id")
+  promptId      String   @map("prompt_id")
+  promptVersion String   @map("prompt_version")
+  model         String
+  mode          String
+  inputTokens   Int      @map("input_tokens")
+  outputTokens  Int      @map("output_tokens")
+  costUsd       Float    @map("cost_usd")
+  latencyMs     Int      @map("latency_ms")
+  error         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([shopId, createdAt])
+  @@map("ai_calls")
+}

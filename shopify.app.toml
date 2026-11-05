@@ -1,0 +1,25 @@
+# Store Ops Assistant — configuration
+client_id = ""
+name = "Store Ops Assistant"
+
+[access_scopes]
+# read_orders: sales + orders (no customer fields requested)
+# read_products, read_inventory, read_locations: stock levels
+# write_inventory: approved stock adjustments; write_products: approved tagsAdd on products
+# Note: orders older than 60 days need read_all_orders (requested separately if needed).
+scopes = "read_orders,read_products,read_inventory,read_locations,write_inventory,write_products"
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/uninstalled"
+  topics = ["app/uninstalled"]
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/compliance"
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
